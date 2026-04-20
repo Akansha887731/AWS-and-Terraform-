@@ -20,24 +20,6 @@ From this database instance, you want to return the database hostname, username,
 
 Here are some useful links:
 
-Resource 
-aws_db_instance
-, list of its 
-arguments
- and 
-attributes
-.
-
-Resource 
-aws_db_subnet_group
-, list of its 
-arguments
- and 
-attributes
-.
-
-Data source 
-aws_subnets
-, list of its 
-attributes
-.
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_subnet_group
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/subnets
