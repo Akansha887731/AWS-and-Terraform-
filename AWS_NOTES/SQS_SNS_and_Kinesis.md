@@ -162,3 +162,63 @@ kinesis.put_record(
     PartitionKey='sensor_42'  # Ensures same sensor data goes to same shard
 )
 ```
+## 5. Amazon Data Firehose (formerly Kinesis Data Firehose)
+
+Amazon Data Firehose is a fully managed, serverless stream-loading service used to load real-time streaming data into data stores and analytics tools.
+
+### 🔹 Key Characteristics & Capabilities
+
+- **Near Real-Time**: Buffers incoming streaming data by **Buffer Size** (1 MB to 128 MB) or **Buffer Interval** (60 to 900 seconds) before flushing.
+- **Serverless & Auto-Scaling**: Automatically scales throughput; no shard management or provisioning required.
+- **Destinations**:
+    - **AWS**: Amazon S3, Amazon Redshift (via S3 COPY command), Amazon OpenSearch Service.
+    - **3rd-Party**: Datadog, Splunk, NewRelic, MongoDB.
+    - **Custom**: Any HTTP Endpoint.
+- **Transformations & Format Conversions**:
+    - Uses **AWS Lambda** for inline data transformations (e.g., JSON modification, CSV-to-JSON).
+    - Natively converts JSON records into columnar formats like **Apache Parquet** or **Apache ORC** for efficient querying in Athena.
+    - Compresses payloads (GZIP, ZIP, Snappy) before saving to destinations.
+- **No Persistence / No Replay**: Firehose does not persist records; data **cannot be replayed**. (Can configured to backup failed/all source records to an S3 bucket).
+
+## 6. Amazon Kinesis Data Streams Operations & Scaling
+
+- **Kinesis Client Library (KCL)**: A Java library (with wrappers for Python/Node) that simplifies building consumers.
+    - Uses **Amazon DynamoDB** to maintain lease checkpoints and track shard consumption progress.
+    - Rule: The number of KCL consumer instances/threads **should not exceed the number of shards** in the stream.
+- **Shard Splitting & Merging**:
+    - **Splitting**: Divides a high-traffic shard into two shards to increase capacity (handles hot keys).
+    - **Merging**: Combines two low-traffic shards into one shard to lower costs (handles cold keys).
+- **Kinesis Producer Library (KPL)**: High-performance C++/Java library that improves throughput via **Batching** (aggregating multiple records into a single payload).
+
+## 7. Amazon MQ (Managed Message Broker)
+
+- **Purpose**: Managed message broker for open-source messaging protocols: **Apache ActiveMQ** and **RabbitMQ**.
+- **Primary Use Case**: Migrating legacy, on-premises applications that rely on industry-standard APIs (JMS, AMQP, MQTT, STOMP, OpenWire) to AWS without rewriting code to use native SQS/SNS APIs.
+- **Deployment Models**: Supports single-broker deployments or high-availability active/standby deployments across Multi-AZs.
+
+## 8. AWS Step Functions (Workflow Orchestration)
+
+- **Purpose**: Serverless visual workflow orchestrator that coordinates distributed applications and AWS services using **State Machines** defined in Amazon States Language (ASL / JSON).
+- **Workflow Types**:
+    - **Standard Workflows**: Long-running (up to 1 year), durable, audit-tracked workflows; ideal for core business processes.
+    - **Express Workflows**: High-volume, short-duration (up to 5 minutes) event processing tasks.
+- **Key Features**: Built-in error handling, automatic retries (`Retry`), catch blocks (`Catch`), sequence branching, parallel processing (`Parallel`), and manual human approval tasks.
+
+## 9. Additional Advanced SQS & SNS Concepts
+
+- **SQS Message Deduplication (FIFO)**:
+    - **Explicit**: Provide a `MessageDeduplicationId` in the `SendMessage` call.
+    - **Content-Based Deduplication**: SQS computes an SHA-256 hash of the `MessageBody` to auto-generate the deduplication ID.
+- **SQS Kinesis/S3 Event Integration**: Resource access policies on SQS must grant `sqs:SendMessage` permissions to the event source service principal (e.g., `s3.amazonaws.com` or `sns.amazonaws.com`).
+- **SNS Dead Letter Queues**: Subscriptions can have an associated SQS DLQ to catch undelivered push notifications if client endpoints or HTTP endpoints are down.
+
+## 10. Master Service Comparison Table
+
+| Service | Primary Architecture | Retention | Latency | Replay Ability? |
+| --- | --- | --- | --- | --- |
+| **Amazon SQS** | Pull / Queueing | 1 min – 14 days | Real-Time | No (Deleted on process) |
+| **Amazon SNS** | Push / Pub-Sub | Ephemeral (0s) | Real-Time | No (Sent immediately) |
+| **Kinesis Data Streams** | Streaming / Shards | 24 hrs – 365 days | Real-Time (~200ms) | **Yes** (Replay shards) |
+| **Amazon Data Firehose** | Near Real-time Ingestion | None (Pass-through) | Near Real-time (60s+) | No |
+| **Amazon MQ** | Legacy Broker (ActiveMQ/RabbitMQ) | Memory / Disk queue | Real-Time | No |
+| **AWS Step Functions** | Workflow State Machine | Up to 1 year (Standard) | Dynamic | State Retries / Execution |
