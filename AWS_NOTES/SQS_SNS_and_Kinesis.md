@@ -85,24 +85,8 @@ Amazon Kinesis is designed for ingesting, processing, and streaming **real-time 
     - **Enhanced Fan-out Consumer**: 2 MB/sec *per consumer per shard* (push via HTTP/2).
 
 ### Stimulation & Comparison: SQS vs. SNS vs. Kinesis
+<img width="1052" height="587" alt="image" src="https://github.com/user-attachments/assets/28c09c26-1b9a-4a03-afba-e3b761560239" />
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            MESSAGING PATTERNS                               │
-├──────────────────────────┬──────────────────────┬───────────────────────────┤
-│    Amazon SQS (Pull)     │   Amazon SNS (Push)  │ Amazon Kinesis (Streaming)│
-│                          │                      │                           │
-│  ┌──────┐    ┌────────┐  │  ┌──────┐  ┌───────┐ │ ┌──────────┐  ┌─────────┐ │
-│  │ Prod │──> │ Queue  │  │  │ Prod │─>│ Topic │ │ │Producers │─>│ Kinesis │ │
-│  └──────┘    └───┬────┘  │  └──────┘  └───┬───┘ │ └──────────┘  │ Stream  │ │
-│                  │       │          ┌─────┴──┐  │               └────┬────┘ │
-│                Polling   │          ▼        ▼  │                    │      │
-│                  ▼       │      ┌──────┐  ┌───┐ │                Shards     │
-│             ┌────────┐   │      │ SQS  │  │λ  │ │                    ▼      │
-│             │Consumer│   │      └──────┘  └───┘ │               ┌─────────┐ │
-│             └────────┘   │                      │               │Consumers│ │
-└──────────────────────────┴──────────────────────┴───────────────┴─────────┘_|
-```
 
 | **Dimension** | **Amazon SQS** | **Amazon SNS** | **Amazon Kinesis Data Streams** |
 | --- | --- | --- | --- |
