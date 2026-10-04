@@ -222,3 +222,60 @@ Amazon Data Firehose is a fully managed, serverless stream-loading service used 
 | **Amazon Data Firehose** | Near Real-time Ingestion | None (Pass-through) | Near Real-time (60s+) | No |
 | **Amazon MQ** | Legacy Broker (ActiveMQ/RabbitMQ) | Memory / Disk queue | Real-Time | No |
 | **AWS Step Functions** | Workflow State Machine | Up to 1 year (Standard) | Dynamic | State Retries / Execution |
+
+# Important diagrams:
+
+### 1. The SNS + SQS Fanout Pattern
+
+*(Use Case: Pub/Sub Decoupling, Event Broadcasting, & Message Filtering)*
+
+This pattern is essential because it demonstrates how to handle **one-to-many communication** while protecting individual downstream microservices with dedicated queues.
+
+<img width="890" height="587" alt="image" src="https://github.com/user-attachments/assets/8f4d92ba-5877-46cc-ba52-7afca6530ea9" />
+
+- **Why it matters:**
+    1. **Publisher Isolation:** The application sends events **once** to SNS and doesn't care who processes them.
+    2. **Asynchronous Retries & Dead-Lettering:** If `Worker 2` crashes, messages pile up safely in `SQS Queue 2` without affecting `Queue 1` or `Queue 3`.
+    3. **Attribute Filtering:** `SQS Queue 2` and `3` only get subset messages matching their **Subscription Filter Policies**, eliminating extra filtering code in workers.
+
+### 2. Stream Processing vs. Direct Storage Load (KDS vs. Firehose)
+
+*(Use Case: Choosing between Real-Time Analytics and Near-Real-Time Ingestion)*
+
+This side-by-side comparison shows when to route streaming data through **Kinesis Data Streams (KDS)** versus **Amazon Data Firehose**.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 DATA PRODUCERS                                          │
+│                   (Application Logs, IoT Sensors, Clickstream Data)                     │
+└──────────────────────────────┬──────────────────────────┬───────────────────────────────┘
+                               │                          │
+                               │ Custom Stream            │ Direct Ingestion
+                               ▼                          ▼
+┌───────────────────────────────────────────────┐  ┌──────────────────────────────────────┐
+│             KINESIS DATA STREAMS              │  │         AMAZON DATA FIREHOSE         │
+│  • Low Latency (~200ms)                       │  │  • Near Real-time (60s–900s buffer)  │
+│  • Storage: 1 to 365 Days                     │  │  • No Storage / No Replay            │
+│  • Supports Historical Replay                 │  │  • Auto-scales (No shards)           │
+│  • Provisioned / On-Demand Shards             │  │  • Optional Inline Lambda Transform  │
+└──────────────────────┬────────────────────────┘  └──────────────────┬───────────────────┘
+                       │                                              │
+┌─────────────┴─────────────┐                                        │ Converts to
+▼                           ▼                                        │ Parquet/ORC
+┌─────────────────┐         ┌─────────────────┐                       ▼
+│ Custom App      │         │ AWS Lambda      │             ┌───────────────────┐
+│ (KCL Consumer   │         │ (Event Source   │             │ Storage & Search  │
+│ via DynamoDB)   │         │  Mapping)       │             │ Destinations      │
+└────────┬────────┘         └────────┬────────┘             │ • Amazon S3       │
+         │                           │                      │ • Redshift        │
+         ▼                           ▼                      │ • OpenSearch      │
+┌─────────────────┐         ┌─────────────────┐             │ • Datadog/Splunk  │
+│ Real-Time Fraud │         │ Real-Time       │             └───────────────────┘
+│ Analytics Engine│         │ Dashboard       │
+└─────────────────┘         └─────────────────┘
+```
+
+- **Why it matters:**
+    - **Kinesis Data Streams (Left side):** Used when **multiple custom consumers** need real-time data, complex event ordering, or the ability to re-process/replay data later.
+    - **Amazon Data Firehose (Right side):** Used when you simply want to **load data into a database, search index, or data lake** with zero operational overhead and built-in format conversion (e.g., Parquet).
+      
